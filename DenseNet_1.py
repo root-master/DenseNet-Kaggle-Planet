@@ -274,10 +274,6 @@ for f, tags in tqdm(df_test.values, miniters=100):
 
 X_test = np.array(X_test, np.float32)
 print('Test data shape: {}'  .format(X_test.shape))
-if K.image_dim_ordering() == "th":
-    n_channels = X_train.shape[1]
-else:
-    n_channels = X_train.shape[-1]
 
 if K.image_dim_ordering() == "th":
     for i in range(n_channels):        
