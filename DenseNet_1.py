@@ -112,25 +112,6 @@ elif K.image_dim_ordering() == "tf":
         std_train = np.std(X_train[:, :, :, i])
         X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
         
-
-if K.image_dim_ordering() == "th":
-    n_channels = X_train.shape[1]
-else:
-    n_channels = X_train.shape[-1]
-
-if K.image_dim_ordering() == "th":
-    for i in range(n_channels):        
-        mean_test = np.mean(X_test[:, i, :, :])
-        std_test = np.std(X_test[:, i, :, :])
-        X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
-                    
-elif K.image_dim_ordering() == "tf":
-    for i in range(n_channels):
-        
-        mean_test = np.mean(X_test[:, :, :, i])
-        std_test = np.std(X_test[:, :, :, i])
-        X_test[:, :, :, i] = (X_test[:, :, :, i] - mean_test) / std_test
-
         
 print('Splitting to training data set and validation set:')
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1)
