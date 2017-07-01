@@ -88,14 +88,6 @@ y_train = np.array(y_train, int)
 print('Training data shape: {}'  .format(X_train.shape))
 print('Traing label shape: {}' .format(y_train.shape))
 
-print("Loading test set:\n")
-for f, tags in tqdm(df_test.values, miniters=100):
-    img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
-    img = cv2.imread(img_path)
-    X_test.append(img)
-
-X_test = np.array(X_test, np.float32)
-print('Test data shape: {}'  .format(X_test.shape))
 
 ###################
 # Data processing #
@@ -113,20 +105,32 @@ if K.image_dim_ordering() == "th":
         mean_train = np.mean(X_train[:, i, :, :])
         std_train = np.std(X_train[:, i, :, :])
         X_train[:, i, :, :] = (X_train[:, i, :, :] - mean_train) / std_train
-        
-        mean_test = np.mean(X_test[:, i, :, :])
-        std_test = np.std(X_test[:, i, :, :])
-        X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
-                    
+                            
 elif K.image_dim_ordering() == "tf":
     for i in range(n_channels):
         mean_train = np.mean(X_train[:, :, :, i])
         std_train = np.std(X_train[:, :, :, i])
         X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
         
+
+if K.image_dim_ordering() == "th":
+    n_channels = X_train.shape[1]
+else:
+    n_channels = X_train.shape[-1]
+
+if K.image_dim_ordering() == "th":
+    for i in range(n_channels):        
+        mean_test = np.mean(X_test[:, i, :, :])
+        std_test = np.std(X_test[:, i, :, :])
+        X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
+                    
+elif K.image_dim_ordering() == "tf":
+    for i in range(n_channels):
+        
         mean_test = np.mean(X_test[:, :, :, i])
         std_test = np.std(X_test[:, :, :, i])
         X_test[:, :, :, i] = (X_test[:, :, :, i] - mean_test) / std_test
+
         
 print('Splitting to training data set and validation set:')
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1)
@@ -257,6 +261,40 @@ model.fit(X_train, y_train,
           batch_size=batch_size, epochs=epochs, shuffle=False,
           validation_data=(X_val, y_val),
           callbacks=[lrate,csv_logger,tensorboard])
+
+
+del X_train
+del y_train
+
+print("Loading test set:\n")
+for f, tags in tqdm(df_test.values, miniters=100):
+    img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
+    img = cv2.imread(img_path)
+    X_test.append(img)
+
+X_test = np.array(X_test, np.float32)
+print('Test data shape: {}'  .format(X_test.shape))
+if K.image_dim_ordering() == "th":
+    n_channels = X_train.shape[1]
+else:
+    n_channels = X_train.shape[-1]
+
+if K.image_dim_ordering() == "th":
+    for i in range(n_channels):        
+        mean_test = np.mean(X_test[:, i, :, :])
+        std_test = np.std(X_test[:, i, :, :])
+        X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
+                    
+elif K.image_dim_ordering() == "tf":
+    for i in range(n_channels):
+        
+        mean_test = np.mean(X_test[:, :, :, i])
+        std_test = np.std(X_test[:, :, :, i])
+        X_test[:, :, :, i] = (X_test[:, :, :, i] - mean_test) / std_test
+
+
+
+
 
 y_pred = model.predict(X_test, batch_size=batch_size)
 
