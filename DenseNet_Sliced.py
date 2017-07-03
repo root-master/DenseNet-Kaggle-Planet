@@ -131,6 +131,7 @@ def load_test_data_slice(data_slice):
 def load_validation_data():
     X_val = []
     y_val = []
+    print('Loading Validation set:')
     for f, tags in tqdm(df_val.values, miniters=100):
         img_path = PLANET_KAGGLE_TRAIN_JPEG_DIR + '/{}.jpg'.format(f)
         img = cv2.imread(img_path)
@@ -178,7 +179,7 @@ def preprocess(X_train):
             mean_train = np.mean(X_train[:, :, :, i])
             std_train = np.std(X_train[:, :, :, i])
             X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
-        
+    return X_train
         
 #############
 # Metrics #
