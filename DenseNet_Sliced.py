@@ -263,7 +263,7 @@ def step_decay(epoch):
 # learning schedule callback
 lrate = LearningRateScheduler(step_decay)
 
-batch_size = 128
+batch_size = 32
 epochs = 50
 
 learningrate = 0.1
