@@ -146,6 +146,9 @@ def load_validation_data():
 
     return X_val, y_val
 
+###################
+# Data processing #
+###################
 def preprocess(X_train):
     if K.image_dim_ordering() == "th":
         for i in range(n_channels):
@@ -164,24 +167,6 @@ X_val, y_val = load_validation_data()
 X_val = preprocess(X_val)
 
 
-###################
-# Data processing #
-###################
-
-def preprocess(X_train):
-    if K.image_dim_ordering() == "th":
-        for i in range(n_channels):
-            mean_train = np.mean(X_train[:, i, :, :])
-            std_train = np.std(X_train[:, i, :, :])
-            X_train[:, i, :, :] = (X_train[:, i, :, :] - mean_train) / std_train
-                                
-    elif K.image_dim_ordering() == "tf":
-        for i in range(n_channels):
-            mean_train = np.mean(X_train[:, :, :, i])
-            std_train = np.std(X_train[:, :, :, i])
-            X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
-    return X_train
-        
 #############
 # Metrics #
 ############
