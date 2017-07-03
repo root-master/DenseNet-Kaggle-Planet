@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 import scipy
 from sklearn.metrics import fbeta_score
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 import keras.backend as K
 
@@ -58,6 +58,29 @@ assert os.path.exists(PLANET_KAGGLE_TEST_JPEG_DIR)
 df_train = pd.read_csv(PLANET_KAGGLE_LABEL_CSV)
 df_test = pd.read_csv(test_submission_format_file)
 
+print('Splitting to training data set and validation set:')
+df_train_split, df_val = train_test_split(df_train, test_size=0.1)
+
+print('Splitted training data set size: {}'  .format(df_train_split.shape[0]))
+print('Validation data set size: {}' .format(df_val.shape[0]))
+
+print('Slicing training data spilt set into set of chuncks:')
+chunk_size = 1024
+chunks = df_train_split.shape[0] // chunk_size
+train_slices = []
+for idx in range(chunks):
+    train_slices.append(slice(idx*chunk_size,(idx+1)*chunk_size))
+train_slices.append(slice((idx+1)*chunk_size,None))
+
+print('Slicing test set into set of chuncks:')
+chunk_size = 1024
+chunks = df_test.shape[0] // chunk_size
+test_slices = []
+for idx in range(chunks):
+    test_slices.append(slice(idx*chunk_size,(idx+1)*chunk_size))
+test_slices.append(slice((idx+1)*chunk_size,None))
+
+
 flatten = lambda l: [item for sublist in l for item in sublist]
 labels = np.array(list(set(flatten([l.split(' ') for l in df_train['tags'].values]))))
 
@@ -68,56 +91,96 @@ THRESHHOLD = np.array(THRESHHOLD)
 label_map = {l: i for i, l in enumerate(labels)}
 inv_label_map = {i: l for l, i in label_map.items()}
 
-X_train = []
-X_test = []
-y_train = []
 
-print("Loading training set:\n")
-for f, tags in tqdm(df_train.values, miniters=100):
-    img_path = PLANET_KAGGLE_TRAIN_JPEG_DIR + '/{}.jpg'.format(f)
-    img = cv2.imread(img_path)
-    targets = np.zeros(NUM_CLASSES)
-    for t in tags.split(' '):
-        targets[label_map[t]] = 1 
-    X_train.append(img)
-    y_train.append(targets)
+def load_train_data_slice(data_slice):
+    X_train = []
+    y_train = []
+    for f, tags in tqdm(df_train_split.values[data_slice], miniters=100):
+        img_path = PLANET_KAGGLE_TRAIN_JPEG_DIR + '/{}.jpg'.format(f)
+        img = cv2.imread(img_path)
+        targets = np.zeros(NUM_CLASSES)
+        for t in tags.split(' '):
+            targets[label_map[t]] = 1 
+        X_train.append(img)
+        y_train.append(targets)
     
-X_train = np.array(X_train, np.float32)
-y_train = np.array(y_train, int)
+    X_train = np.array(X_train, np.float32)
+    y_train = np.array(y_train, int)
 
-print('Training data shape: {}'  .format(X_train.shape))
-print('Traing label shape: {}' .format(y_train.shape))
+    return X_train, y_train
+
+def load_test_data_slice(data_slice):
+    X_test = []
+    for f, tags in tqdm(df_test.values[data_slice], miniters=100):
+        img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
+        img = cv2.imread(img_path)
+        X_test.append(img)
+    
+    X_test = np.array(X_train, np.float32)
+
+    return X_test
+
+def load_validation_data():
+    X_val = []
+    y_val = []
+    for f, tags in tqdm(df_val.values, miniters=100):
+        img_path = PLANET_KAGGLE_TRAIN_JPEG_DIR + '/{}.jpg'.format(f)
+        img = cv2.imread(img_path)
+        targets = np.zeros(NUM_CLASSES)
+        for t in tags.split(' '):
+            targets[label_map[t]] = 1 
+        X_val.append(img)
+        y_val.append(targets)
+    
+    X_val = np.array(X_val, np.float32)
+    y_val = np.array(y_val, int)
+
+    return X_val, y_val
+
+def preprocess(X_train):
+    if K.image_dim_ordering() == "th":
+        for i in range(n_channels):
+            mean_train = np.mean(X_train[:, i, :, :])
+            std_train = np.std(X_train[:, i, :, :])
+            X_train[:, i, :, :] = (X_train[:, i, :, :] - mean_train) / std_train
+                                
+    elif K.image_dim_ordering() == "tf":
+        for i in range(n_channels):
+            mean_train = np.mean(X_train[:, :, :, i])
+            std_train = np.std(X_train[:, :, :, i])
+            X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
+
+X_val, y_val = load_validation_data()
+X_val = preprocess(X_val)
 
 
 ###################
 # Data processing #
 ###################
 
-img_dim = X_train.shape[1:]
-
-if K.image_dim_ordering() == "th":
-    n_channels = X_train.shape[1]
+if K.image_dim_ordering() == "th": 
+# if you want to use theano as backend, images should be reshaped.
+# I haven't rehspaed in this script because I am using tensorflow
+    n_channels = 3
+    img_dim = (3,256,256)
 elif K.image_dim_ordering() == "tf":
-    n_channels = X_train.shape[-1]
+    n_channels = 3
+    img_dim = (256,256,3)
 
-if K.image_dim_ordering() == "th":
-    for i in range(n_channels):
-        mean_train = np.mean(X_train[:, i, :, :])
-        std_train = np.std(X_train[:, i, :, :])
-        X_train[:, i, :, :] = (X_train[:, i, :, :] - mean_train) / std_train
-                            
-elif K.image_dim_ordering() == "tf":
-    for i in range(n_channels):
-        mean_train = np.mean(X_train[:, :, :, i])
-        std_train = np.std(X_train[:, :, :, i])
-        X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
+def preprocess(X_train):
+    if K.image_dim_ordering() == "th":
+        for i in range(n_channels):
+            mean_train = np.mean(X_train[:, i, :, :])
+            std_train = np.std(X_train[:, i, :, :])
+            X_train[:, i, :, :] = (X_train[:, i, :, :] - mean_train) / std_train
+                                
+    elif K.image_dim_ordering() == "tf":
+        for i in range(n_channels):
+            mean_train = np.mean(X_train[:, :, :, i])
+            std_train = np.std(X_train[:, :, :, i])
+            X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
         
         
-print('Splitting to training data set and validation set:')
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1)
-print('Splitted training data set shape: {}'  .format(X_train.shape))
-print('Validation data set shape: {}' .format(X_val.shape))
-
 #############
 # Metrics #
 ############
@@ -238,42 +301,52 @@ tensorboard = TensorBoard(log_dir='./logs',write_graph=True, write_images=False)
 
 log_filename = './logs/training.csv'
 csv_logger = CSVLogger(log_filename,separator=',',append=False)
-model.fit(X_train, y_train,
-          batch_size=batch_size, epochs=epochs, shuffle=False,
-          validation_data=(X_val, y_val),
-          callbacks=[lrate,csv_logger,tensorboard])
+# model.fit(X_train, y_train,
+#           batch_size=batch_size, epochs=epochs, shuffle=False,
+#           validation_data=(X_val, y_val),
+#           callbacks=[lrate,csv_logger,tensorboard])
 
 
-del X_train
-del y_train
+############
+# TRAINING #
+############
+for e in range(epochs):
+    print("epoch %d" % e)
+    for train_slice in train_slices:
+        X_train, y_train = load_train_data_slice(train_slice) 
+        X_train = preprocess(X_train)
+        model.fit(X_train, y_train, batch_size=batch_size, nb_epoch=1,
+                    callbacks=[lrate,csv_logger,tensorboard])
+    val_loss = model.evaluate(X_val, y_val, batch_size=batch_size, verbose=1)
 
-print("Loading test set:\n")
-for f, tags in tqdm(df_test.values, miniters=100):
-    img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
-    img = cv2.imread(img_path)
-    X_test.append(img)
+y_pred = np.zeros((df_test.values.shape[0],NUM_CLASSES))
+for test_slice in test_slices:
+    X_test = load_test_data_slice(test_slice)
+    X_test = preprocess(X_test)
+    y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size)
+    
+# print("Loading test set:\n")
+# for f, tags in tqdm(df_test.values, miniters=100):
+#     img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
+#     img = cv2.imread(img_path)
+#     X_test.append(img)
 
-X_test = np.array(X_test, np.float32)
-print('Test data shape: {}'  .format(X_test.shape))
+# X_test = np.array(X_test, np.float32)
+# print('Test data shape: {}'  .format(X_test.shape))
 
-if K.image_dim_ordering() == "th":
-    for i in range(n_channels):        
-        mean_test = np.mean(X_test[:, i, :, :])
-        std_test = np.std(X_test[:, i, :, :])
-        X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
+# if K.image_dim_ordering() == "th":
+#     for i in range(n_channels):        
+#         mean_test = np.mean(X_test[:, i, :, :])
+#         std_test = np.std(X_test[:, i, :, :])
+#         X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
                     
-elif K.image_dim_ordering() == "tf":
-    for i in range(n_channels):
+# elif K.image_dim_ordering() == "tf":
+#     for i in range(n_channels):
         
-        mean_test = np.mean(X_test[:, :, :, i])
-        std_test = np.std(X_test[:, :, :, i])
-        X_test[:, :, :, i] = (X_test[:, :, :, i] - mean_test) / std_test
-
-
-
-
-
-y_pred = model.predict(X_test, batch_size=batch_size)
+#         mean_test = np.mean(X_test[:, :, :, i])
+#         std_test = np.std(X_test[:, :, :, i])
+#         X_test[:, :, :, i] = (X_test[:, :, :, i] - mean_test) / std_test
+# y_pred = model.predict(X_test, batch_size=batch_size)
 
 predictions = [' '.join(labels[y_pred_row > 0.01]) for y_pred_row in y_pred]
 submission = pd.DataFrame()
