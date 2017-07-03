@@ -91,6 +91,14 @@ THRESHHOLD = np.array(THRESHHOLD)
 label_map = {l: i for i, l in enumerate(labels)}
 inv_label_map = {i: l for l, i in label_map.items()}
 
+if K.image_dim_ordering() == "th": 
+# if you want to use theano as backend, images should be reshaped.
+# I haven't rehspaed in this script because I am using tensorflow
+    n_channels = 3
+    img_dim = (3,256,256)
+elif K.image_dim_ordering() == "tf":
+    n_channels = 3
+    img_dim = (256,256,3)
 
 def load_train_data_slice(data_slice):
     X_train = []
@@ -157,15 +165,6 @@ X_val = preprocess(X_val)
 ###################
 # Data processing #
 ###################
-
-if K.image_dim_ordering() == "th": 
-# if you want to use theano as backend, images should be reshaped.
-# I haven't rehspaed in this script because I am using tensorflow
-    n_channels = 3
-    img_dim = (3,256,256)
-elif K.image_dim_ordering() == "tf":
-    n_channels = 3
-    img_dim = (256,256,3)
 
 def preprocess(X_train):
     if K.image_dim_ordering() == "th":
