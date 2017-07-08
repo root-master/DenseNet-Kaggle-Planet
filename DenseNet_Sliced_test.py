@@ -316,7 +316,7 @@ for e in range(epochs):
     
     l_train_loss = []   
     split_size = batch_size
-    for train_slice in train_slices[0]:
+    for train_slice in train_slices:
         X_train, y_train = load_train_data_slice(train_slice) 
         X_train = preprocess(X_train)
 
