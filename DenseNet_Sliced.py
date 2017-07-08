@@ -254,7 +254,7 @@ batch_size = 64
 epochs = 50
 
 learning_rate = 0.01
-decay = learningrate / epochs
+decay = learning_rate / epochs
 
 depth = 40
 nb_dense_block = 4
