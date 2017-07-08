@@ -251,7 +251,7 @@ def step_decay(epoch):
 lrate = LearningRateScheduler(step_decay)
 
 batch_size = 64
-epochs = 50
+epochs = 1
 
 learning_rate = 0.01
 decay = learningrate / epochs
