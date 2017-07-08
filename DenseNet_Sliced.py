@@ -258,7 +258,7 @@ decay = learning_rate / epochs
 
 depth = 40
 nb_dense_block = 4
-growth_rate = 48
+growth_rate = 24
 nb_filter = 16
 dropout_rate = 0.2 # 0.0 for data augmentation
 weight_decay=1E-4
