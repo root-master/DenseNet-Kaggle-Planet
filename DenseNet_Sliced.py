@@ -327,16 +327,16 @@ for e in range(epochs):
 
         for batch_idx in arr_splits:
             X_batch, y_batch = X_train[batch_idx], y_train[batch_idx]
-            train_logloss, train_acc = model.train_on_batch(X_batch, y_batch)
-            l_train_loss.append([train_logloss, train_acc])
+            train_logloss, train_acc,f2_score = model.train_on_batch(X_batch, y_batch)
+            l_train_loss.append([train_logloss, train_acc, f2_score])
             list_train_loss.append(np.mean(np.array(l_train_loss), 0).tolist())
 
-    val_loss, val_acc = model.evaluate(X_val,
+    val_loss, val_acc,val_f2_score = model.evaluate(X_val,
                                         y_val,
                                         verbose=1,
                                         batch_size=batch_size)
         
-    list_test_loss.append([val_loss, val_acc])
+    list_test_loss.append([val_loss, val_acc,val_f2_score])
     list_learning_rate.append(float(K.get_value(model.optimizer.lr)))
         # to convert numpy array to json serializable
     print('Epoch %s/%s, Time: %s' % (e + 1, epochs, time.time() - start))
