@@ -256,7 +256,7 @@ epochs = 1
 learning_rate = 0.01
 decay = learning_rate / epochs
 
-depth = 24
+depth = 25
 nb_dense_block = 4
 growth_rate = 12
 nb_filter = 16
