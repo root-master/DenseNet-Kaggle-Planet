@@ -324,7 +324,7 @@ for e in range(epochs):
         arr_splits = np.array_split(np.arange(X_train.shape[0]), num_splits)
 
         start = time.time()
-for batch_idx in arr_splits:
+        for batch_idx in arr_splits:
             X_batch, y_batch = X_train[batch_idx], y_train[batch_idx]
             train_logloss, train_acc,f2_score = model.train_on_batch(X_batch, y_batch)
             l_train_loss.append([train_logloss, train_acc, f2_score])
