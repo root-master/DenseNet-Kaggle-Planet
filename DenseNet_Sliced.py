@@ -27,7 +27,7 @@ from keras.utils import np_utils
 
 
 from keras.models import Model, Sequential
-from keras.layers import Input, merge, Convolution2D, MaxPooling2D, UpSampling2D
+from keras.layers import Input, merge, Convolution2D, MaxPooling2D, UpSampling2D,ZeroPadding2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers import Reshape, core, Dense, Dropout, Flatten
 from keras.layers import Conv2D
@@ -231,13 +231,57 @@ def cnn_model():
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(NUM_CLASSES, activation='sigmoid'))
-    # model.compile(loss='binary_crossentropy', # We NEED binary here, since categorical_crossentropy l1 norms the output before calculating loss.
-    #               optimizer='adam',
-    #               metrics=['accuracy'])
-                  
-
+    model.add(Dense(NUM_CLASSES, activation='sigmoid'))            
     return model
+
+def VGG_16():
+    model = Sequential()
+    model.add(ZeroPadding2D((1,1),input_shape=img_dim))
+    model.add(Convolution2D(64, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(64, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2,2), strides=(2,2)))
+
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(128, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(128, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2,2), strides=(2,2)))
+
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(256, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(256, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(256, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2,2), strides=(2,2)))
+
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2,2), strides=(2,2)))
+
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1,1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2,2), strides=(2,2)))
+
+    model.add(Flatten())
+    model.add(Dense(4096, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(4096, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(NUM_CLASSES, activation='softmax'))
+    
+    return model
+
+
 
 
 # learning rate schedule
@@ -256,7 +300,7 @@ epochs = 50
 learning_rate = 0.01
 decay = learning_rate / epochs
 
-depth = 25
+depth = 100
 nb_dense_block = 4
 growth_rate = 12
 nb_filter = 16
@@ -264,14 +308,15 @@ dropout_rate = 0.2 # 0.0 for data augmentation
 weight_decay=1E-4
 
 # model = cnn_model()
+# model = densenet.DenseNet(input_shape=img_dim, depth=depth, nb_dense_block=nb_dense_block, 
+#         growth_rate=growth_rate, nb_filter=nb_filter, nb_layers_per_block=-1,
+#         bottleneck=True, reduction=0.0, dropout_rate=dropout_rate, weight_decay=weight_decay,
+#         include_top=True, weights=None, input_tensor=None,
+#         classes=NUM_CLASSES, activation='softmax')
+model = VGG_16()
 
-model = densenet.DenseNet(input_shape=img_dim, depth=depth, nb_dense_block=nb_dense_block, 
-        growth_rate=growth_rate, nb_filter=nb_filter, nb_layers_per_block=-1,
-        bottleneck=True, reduction=0.0, dropout_rate=dropout_rate, weight_decay=weight_decay,
-        include_top=True, weights=None, input_tensor=None,
-        classes=NUM_CLASSES, activation='softmax')
+
 print("Model created")
-
 model.summary()
 
 # optimizer = Adam(lr=1e-4) # Using Adam instead of SGD to speed up training
@@ -306,7 +351,7 @@ list_train_loss = []
 list_test_loss = []
 list_learning_rate = []
 
-for e in range(epochs):
+for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
 
     if e == int(0.5 * epochs):
         K.set_value(model.optimizer.lr, np.float32(learning_rate / 10.))
@@ -316,7 +361,7 @@ for e in range(epochs):
     
     l_train_loss = []   
     split_size = batch_size
-    for train_slice in train_slices:
+    for train_slice in tqdm(train_slices,miniters=1,desc='Train Samples'):
         X_train, y_train = load_train_data_slice(train_slice) 
         X_train = preprocess(X_train)
 
@@ -325,7 +370,7 @@ for e in range(epochs):
 
         start = time.time()
 
-        for batch_idx in arr_splits:
+        for batch_idx in tqdm(arr_splits,miniters=1,desc='Batch'):
             X_batch, y_batch = X_train[batch_idx], y_train[batch_idx]
             train_logloss, train_acc,f2_score = model.train_on_batch(X_batch, y_batch)
             l_train_loss.append([train_logloss, train_acc, f2_score])
