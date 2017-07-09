@@ -118,15 +118,13 @@ def load_train_data_slice(data_slice):
 
     return X_train, y_train
 
-def load_test_data_slice(data_slice):
+def load_test_data_slice(test_slice):
     X_test = []
-    for f, tags in tqdm(df_test.values[data_slice], miniters=100):
+    for f, tags in tqdm(df_test.values[test_slice], miniters=100):
         img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
         img = cv2.imread(img_path)
-        X_test.append(img)
-    
-    X_test = np.array(X_train, np.float32)
-
+        X_test.append(img)    
+    X_test = np.array(X_test, np.float32)
     return X_test
 
 def load_validation_data():
@@ -385,7 +383,7 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
     list_learning_rate.append(float(K.get_value(model.optimizer.lr)))
         # to convert numpy array to json serializable
     print('Epoch %s/%s, Time: %s' % (e + 1, epochs, time.time() - start))
-    model.save('./model/last-epoch-model.h5')
+    model.save('last-epoch-model.h5')
 
     d_log = {}
     d_log["batch_size"] = batch_size
@@ -414,7 +412,7 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
 # model.save('my_model.h5')
 
 y_pred = np.zeros((df_test.values.shape[0],NUM_CLASSES))
-for test_slice in test_slices:
+for test_slice in tqdm(test_slices,miniters=1,desc='Prediction'):
     X_test = load_test_data_slice(test_slice)
     X_test = preprocess(X_test)
     y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size)
