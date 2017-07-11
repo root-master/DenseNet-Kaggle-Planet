@@ -275,7 +275,7 @@ def VGG_16():
     model.add(Dropout(0.5))
     model.add(Dense(4096, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(NUM_CLASSES, activation='softmax'))
+    model.add(Dense(NUM_CLASSES, activation='sigmoid'))
     
     return model
 
@@ -293,7 +293,7 @@ def step_decay(epoch):
 lrate = LearningRateScheduler(step_decay)
 
 batch_size = 16
-epochs = 10
+epochs = 1
 
 learning_rate = 0.01
 decay = learning_rate / epochs
@@ -305,13 +305,13 @@ nb_filter = 16
 dropout_rate = 0.2 # 0.0 for data augmentation
 weight_decay=1E-4
 
-# model = cnn_model()
+model = cnn_model()
 # model = densenet.DenseNet(input_shape=img_dim, depth=depth, nb_dense_block=nb_dense_block, 
 #         growth_rate=growth_rate, nb_filter=nb_filter, nb_layers_per_block=-1,
 #         bottleneck=True, reduction=0.0, dropout_rate=dropout_rate, weight_decay=weight_decay,
 #         include_top=True, weights=None, input_tensor=None,
 #         classes=NUM_CLASSES, activation='softmax')
-model = VGG_16()
+#model = VGG_16()
 
 
 print("Model created")
@@ -412,10 +412,13 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
 # model.save('my_model.h5')
 
 y_pred = np.zeros((df_test.values.shape[0],NUM_CLASSES))
+probs = np.zeros((df_test.values.shape[0],NUM_CLASSES))
 for test_slice in tqdm(test_slices,miniters=1,desc='Prediction'):
     X_test = load_test_data_slice(test_slice)
     X_test = preprocess(X_test)
-    y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size)
+    # y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size)
+    y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size,verbose=1)
+    probs[test_slice,:] = model.predict_proba(X_test, batch_size=batch_size,verbose=1)
     
 # print("Loading test set:\n")
 # for f, tags in tqdm(df_test.values, miniters=100):
