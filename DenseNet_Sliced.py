@@ -229,7 +229,7 @@ def cnn_model():
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(NUM_CLASSES, activation='sigmoid'))            
+    model.add(Dense(NUM_CLASSES, activation='softmax'))            
     return model
 
 def VGG_16():
