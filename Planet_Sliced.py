@@ -405,9 +405,8 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
         wait = 0 # restart wait
         model.save('best-epoch-model-min-val-loss.h5')
 
-    l_val_loss.append([val_loss, val_acc, val_f2_score])
+    list_val_loss.append([val_loss, val_acc,val_f2_score])
     
-    list_val_loss.append(np.mean(np.array(l_val_loss), 0).tolist())
     ############ LOOP ON BATCHES of Validation for DATA AUGMENTATION ###########
     # l_val_loss = []
     # for X_batch, y_batch in datagen.flow(X_val, y_val, batch_size=batch_size):           
@@ -426,7 +425,8 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
     #                                     verbose=1,
     #                                     batch_size=batch_size)        
     # list_test_loss.append([val_loss, val_acc,val_f2_score])
-    # list_learning_rate.append(float(K.get_value(model.optimizer.lr)))
+    
+    list_learning_rate.append(float(K.get_value(model.optimizer.lr)))
         # to convert numpy array to json serializable
     print('Epoch %s/%s, Time: %s' % (e + 1, epochs, time.time() - start))
 
