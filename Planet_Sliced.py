@@ -33,6 +33,7 @@ from keras.layers import Reshape, core, Dense, Dropout, Flatten
 from keras.layers import Conv2D
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler,TensorBoard,CSVLogger
+from keras.preprocessing.image import ImageDataGenerator
 
 from VGG16 import VGG16
 
