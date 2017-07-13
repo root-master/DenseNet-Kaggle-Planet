@@ -397,7 +397,7 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
 
     val_loss_last = val_loss
     val_loss, val_acc,val_f2_score = \
-            model.evaluate_generator(generator,steps=len(X_val) / batch_size,use_multiprocessing=True)
+            model.evaluate_generator(generator,steps=len(X_val) / batch_size)
     
     # save the best model based on validation loss
     if val_loss < val_loss_min:
