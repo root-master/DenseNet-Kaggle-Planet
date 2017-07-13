@@ -35,7 +35,7 @@ TF_WEIGHTS_PATH_NO_TOP = 'https://github.com/titu1994/DenseNet/releases/download
 def DenseNet(input_shape=None, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=16, nb_layers_per_block=-1,
              bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1E-4,
              include_top=True, weights=None, input_tensor=None,
-             classes=17, activation='softmax'):
+             classes=17, activation='sigmoid'):
     '''Instantiate the DenseNet architecture,
         optionally loading weights pre-trained
         on CIFAR-10. Note that when using TensorFlow,

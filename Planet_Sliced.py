@@ -34,6 +34,8 @@ from keras.layers import Conv2D
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler,TensorBoard,CSVLogger
 
+from VGG16 import VGG16
+
 
 PLANET_KAGGLE_ROOT = os.path.abspath("../../input/")
 # PLANET_KAGGLE_TEST_JPEG_DIR  = os.path.join(PLANET_KAGGLE_ROOT, 'testing-sets-for-coding/test-jpg-small')
@@ -58,13 +60,13 @@ assert os.path.exists(PLANET_KAGGLE_TEST_JPEG_DIR)
 df_train = pd.read_csv(PLANET_KAGGLE_LABEL_CSV)
 df_test = pd.read_csv(test_submission_format_file)
 
-print('Splitting to training data set and validation set:')
+print('Splitting to training data set and validation set')
 df_train_split, df_val = train_test_split(df_train, test_size=0.1)
 
 print('Splitted training data set size: {}'  .format(df_train_split.shape[0]))
 print('Validation data set size: {}' .format(df_val.shape[0]))
 
-print('Slicing training data spilt set into set of chuncks:')
+print('Slicing training data spilt set into set of chuncks')
 chunk_size = 4096
 chunks = df_train_split.shape[0] // chunk_size
 train_slices = []
@@ -73,7 +75,15 @@ for idx in range(chunks):
 train_slices.append(slice((idx+1)*chunk_size,None))
 # train_slices = np.array_split(np.arange(df_train_split.shape[0]) , chunks+1)
 
-print('Slicing test set into set of chuncks:')
+print('Slicing all training data set into set of chuncks')
+chunk_size = 4096
+chunks = df_train.shape[0] // chunk_size
+all_train_slices = []
+for idx in range(chunks):
+    all_train_slices.append(slice(idx*chunk_size,(idx+1)*chunk_size))
+all_train_slices.append(slice((idx+1)*chunk_size,None))
+
+print('Slicing test set into set of chuncks')
 chunk_size = 4096
 chunks = df_test.shape[0] // chunk_size
 test_slices = []
@@ -162,6 +172,10 @@ def preprocess(X_train):
             X_train[:, :, :, i] = (X_train[:, :, :, i] - mean_train) / std_train
     return X_train
 
+##########################
+# Loading Validation set 
+# to memory 
+##########################
 X_val, y_val = load_validation_data()
 X_val = preprocess(X_val)
 
@@ -229,57 +243,8 @@ def cnn_model():
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(NUM_CLASSES, activation='softmax'))            
+    model.add(Dense(NUM_CLASSES, activation='sigmoid'))            
     return model
-
-def VGG_16():
-    model = Sequential()
-    model.add(ZeroPadding2D((1,1),input_shape=img_dim))
-    model.add(Convolution2D(64, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(64, 3, 3, activation='relu'))
-    model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(128, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(128, 3, 3, activation='relu'))
-    model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(256, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(256, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(256, 3, 3, activation='relu'))
-    model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(512, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(512, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(512, 3, 3, activation='relu'))
-    model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(512, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(512, 3, 3, activation='relu'))
-    model.add(ZeroPadding2D((1,1)))
-    model.add(Convolution2D(512, 3, 3, activation='relu'))
-    model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-    model.add(Flatten())
-    model.add(Dense(4096, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(4096, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(NUM_CLASSES, activation='sigmoid'))
-    
-    return model
-
-
 
 
 # learning rate schedule
@@ -293,44 +258,52 @@ def step_decay(epoch):
 lrate = LearningRateScheduler(step_decay)
 
 batch_size = 16
-epochs = 1
+epochs = 20
 
-learning_rate = 0.01
+learning_rate = 0.001
 decay = learning_rate / epochs
 
-depth = 100
-nb_dense_block = 4
-growth_rate = 12
-nb_filter = 16
-dropout_rate = 0.2 # 0.0 for data augmentation
-weight_decay=1E-4
-
-model = cnn_model()
+#########################################
+############## DENSENET #################
+#########################################
+# depth = 100
+# nb_dense_block = 4
+# growth_rate = 12
+# nb_filter = 16
+# dropout_rate = 0.2 # 0.0 for data augmentation
+# weight_decay=1E-4
 # model = densenet.DenseNet(input_shape=img_dim, depth=depth, nb_dense_block=nb_dense_block, 
 #         growth_rate=growth_rate, nb_filter=nb_filter, nb_layers_per_block=-1,
 #         bottleneck=True, reduction=0.0, dropout_rate=dropout_rate, weight_decay=weight_decay,
 #         include_top=True, weights=None, input_tensor=None,
 #         classes=NUM_CLASSES, activation='softmax')
+
+
+#######################################
+########## LOAD MODEL #################
+#######################################
+model = VGG16(classes=NUM_CLASSES)
+# model = cnn_model()
 #model = VGG_16()
-
-
 print("Model created")
 model.summary()
 
+#######################################
+########## OPTIMIZER ##################
+#######################################
 # optimizer = Adam(lr=1e-4) # Using Adam instead of SGD to speed up training
-# optimizer = SGD(lr=learning_rate, decay=0.0, momentum=0.9, nesterov=True)
-optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-
-
+optimizer = SGD(lr=learning_rate, decay=0.0, momentum=0.9, nesterov=True)
+# optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy',f2_beta_keras])
 print("Finished compiling")
 print("Building model...")
 
+######################################
+####### LOG, SAVE AND MONITOR ########
+######################################
 model_file_path = './model/weights.{epoch:02d}-{val_loss:.2f}.hdf5'
 check = ModelCheckpoint(model_file_path, monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
-
 tensorboard = TensorBoard(log_dir='./logs',write_graph=True, write_images=False)
-
 log_filename = './logs/training.csv'
 csv_logger = CSVLogger(log_filename,separator=',',append=False)
 # model.fit(X_train, y_train,
@@ -339,6 +312,32 @@ csv_logger = CSVLogger(log_filename,separator=',',append=False)
 #           callbacks=[lrate,csv_logger,tensorboard])
 
 
+
+
+
+##################################
+###### DATA AUGMENTATION #########
+##################################
+datagen = ImageDataGenerator(featurewise_center=False,
+    samplewise_center=False,
+    featurewise_std_normalization=False,
+    samplewise_std_normalization=False,
+    zca_whitening=False,
+    zca_epsilon=1e-6,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.,
+    zoom_range=0.2,
+    channel_shift_range=0.,
+    fill_mode='nearest',
+    cval=0.,
+    horizontal_flip=True,
+    vertical_flip=True,
+    rescale=None,
+    preprocessing_function=None,
+    data_format=K.image_data_format())
+
 ####################
 # Network training #
 ####################
@@ -346,11 +345,16 @@ csv_logger = CSVLogger(log_filename,separator=',',append=False)
 print("Training")
 
 list_train_loss = []
-list_test_loss = []
+list_val_loss = []
 list_learning_rate = []
+val_loss = 1000
+val_loss_min = 1000
+val_loss_last = 1000
+wait = 0 # using for early stopping
+patience = 
 
 for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
-
+    start = time.time()
     if e == int(0.5 * epochs):
         K.set_value(model.optimizer.lr, np.float32(learning_rate / 10.))
 
@@ -359,47 +363,93 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
     
     l_train_loss = []   
     split_size = batch_size
+
+    ########### LOOP ON TRAINING DATA SLICES ###########
     for train_slice in tqdm(train_slices,miniters=1,desc='Train Samples'):
         X_train, y_train = load_train_data_slice(train_slice) 
         X_train = preprocess(X_train)
-
-        num_splits = X_train.shape[0] / split_size
-        arr_splits = np.array_split(np.arange(X_train.shape[0]), num_splits)
-
-        start = time.time()
-
-        for batch_idx in tqdm(arr_splits,miniters=1,desc='Batch'):
-            X_batch, y_batch = X_train[batch_idx], y_train[batch_idx]
-            train_logloss, train_acc,f2_score = model.train_on_batch(X_batch, y_batch)
+        datagen.fit(X_train)
+        batches = 0
+        ############ LOOP ON BATCHES ###########
+        for X_batch, y_batch in datagen.flow(X_train, y_train, batch_size=batch_size):           
+            train_logloss, train_acc, f2_score = model.train_on_batch(X_batch, y_batch)
             l_train_loss.append([train_logloss, train_acc, f2_score])
             list_train_loss.append(np.mean(np.array(l_train_loss), 0).tolist())
-
-    val_loss, val_acc,val_f2_score = model.evaluate(X_val,
-                                        y_val,
-                                        verbose=1,
-                                        batch_size=batch_size)
+            batches += 1
+            if batches >= len(X_train) / batch_size:
+                # we need to break the loop by hand because
+                # the generator loops indefinitely
+                break
         
-    list_test_loss.append([val_loss, val_acc,val_f2_score])
-    list_learning_rate.append(float(K.get_value(model.optimizer.lr)))
+        # num_splits = X_train.shape[0] / split_size
+        # arr_splits = np.array_split(np.arange(X_train.shape[0]), num_splits)
+        # start = time.time()
+        # for batch_idx in tqdm(arr_splits,miniters=1,desc='Batch'):
+        #     X_batch, y_batch = X_train[batch_idx], y_train[batch_idx]
+        #     train_logloss, train_acc,f2_score = model.train_on_batch(X_batch, y_batch)
+        #     l_train_loss.append([train_logloss, train_acc, f2_score])
+        #     list_train_loss.append(np.mean(np.array(l_train_loss), 0).tolist())
+            
+
+    batches = 0
+    datagen.fit(X_val)
+    generator = datagen.flow(X_val, y_val, batch_size=batch_size)
+
+    val_loss_last = val_loss
+    val_loss, val_acc,val_f2_score = \
+            model.evaluate_generator(generator,steps_per_epoch=len(X_val) / batch_size)
+    
+    # save the best model based on validation loss
+    if val_loss < val_loss_min
+        val_loss_min = val_loss
+        wait = 0 # restart wait
+        model.save('best-epoch-model-min-val-loss.h5')
+
+    l_val_loss.append([val_loss, val_acc, val_f2_score])
+    
+    list_val_loss.append(np.mean(np.array(l_val_loss), 0).tolist())
+    ############ LOOP ON BATCHES of Validation for DATA AUGMENTATION ###########
+    # l_val_loss = []
+    # for X_batch, y_batch in datagen.flow(X_val, y_val, batch_size=batch_size):           
+    #     val_loss, val_acc,val_f2_score = model.test_on_batch(X_batch, y_batch)
+    #     l_val_loss.append([val_loss, val_acc, val_f2_score])
+    #     list_val_loss.append(np.mean(np.array(l_val_loss), 0).tolist())
+    
+    #     batches += 1
+    #     if batches >= len(X_train) / batch_size:
+    #         # we need to break the loop by hand because
+    #         # the generator loops indefinitely
+    #         break
+
+    # val_loss, val_acc,val_f2_score = model.evaluate(X_val,
+    #                                     y_val,
+    #                                     verbose=1,
+    #                                     batch_size=batch_size)        
+    # list_test_loss.append([val_loss, val_acc,val_f2_score])
+    # list_learning_rate.append(float(K.get_value(model.optimizer.lr)))
         # to convert numpy array to json serializable
     print('Epoch %s/%s, Time: %s' % (e + 1, epochs, time.time() - start))
-    model.save('last-epoch-model.h5')
 
     d_log = {}
     d_log["batch_size"] = batch_size
     d_log["nb_epoch"] = epochs
     d_log["optimizer"] = optimizer.get_config()
     d_log["train_loss"] = list_train_loss
-    d_log["test_loss"] = list_test_loss
+    d_log["test_loss"] = list_val_loss
     d_log["learning_rate"] = list_learning_rate
 
     json_file = os.path.join('./logs/experiment_Planet_Densenet.json')
     with open(json_file, 'w') as fp:
         json.dump(d_log, fp, indent=4, sort_keys=True)
 
+    model.save('last-epoch-model-val.h5')
+    # early stopping
+    if val_loss > val_loss_last:
+        wait += 1
 
-
-
+    if wait == 2:
+        break
+        
 # for e in range(epochs):
 #     print("epoch %d" % e)
 #     for train_slice in train_slices[0]:
@@ -412,76 +462,83 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
 # model.save('my_model.h5')
 
 y_pred = np.zeros((df_test.values.shape[0],NUM_CLASSES))
-probs = np.zeros((df_test.values.shape[0],NUM_CLASSES))
+y_pred_not_aug = np.zeros((df_test.values.shape[0],NUM_CLASSES))
+
 for test_slice in tqdm(test_slices,miniters=1,desc='Prediction'):
     X_test = load_test_data_slice(test_slice)
     X_test = preprocess(X_test)
-    # y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size)
-    y_pred[test_slice,:] = model.predict(X_test, batch_size=batch_size,verbose=1)
-    probs[test_slice,:] = model.predict_proba(X_test, batch_size=batch_size,verbose=1)
-    
-# print("Loading test set:\n")
-# for f, tags in tqdm(df_test.values, miniters=100):
-#     img_path = PLANET_KAGGLE_TEST_JPEG_DIR + '/{}.jpg'.format(f)
-#     img = cv2.imread(img_path)
-#     X_test.append(img)
+    y_pred_not_aug[test_slice,:] = model.predict(X_test, batch_size=batch_size,verbose=1)
 
-# X_test = np.array(X_test, np.float32)
-# print('Test data shape: {}'  .format(X_test.shape))
+    datagen.fit(X_test)
+    generator = datagen.flow(X_test,batch_size=batch_size)
+    y_pred[test_slice,:] = \
+        model.predict_generator(generator, steps=len(X_test)/batch_size, max_queue_size=10, workers=1, use_multiprocessing=True, verbose=1)
 
-# if K.image_dim_ordering() == "th":
-#     for i in range(n_channels):        
-#         mean_test = np.mean(X_test[:, i, :, :])
-#         std_test = np.std(X_test[:, i, :, :])
-#         X_test[:, i, :, :] = (X_test[:, i, :, :] - mean_test) / std_test
-                    
-# elif K.image_dim_ordering() == "tf":
-#     for i in range(n_channels):
-        
-#         mean_test = np.mean(X_test[:, :, :, i])
-#         std_test = np.std(X_test[:, :, :, i])
-#         X_test[:, :, :, i] = (X_test[:, :, :, i] - mean_test) / std_test
-# y_pred = model.predict(X_test, batch_size=batch_size)
 
-predictions = [' '.join(labels[y_pred_row > 0.02]) for y_pred_row in y_pred]
+
+##################### PREDICTIONS NOT AUGMENTED ################### 
+########### Split data 90% - 10% Validation #######################
+predictions = [' '.join(labels[y_pred_row >= 0.1]) for y_pred_row in y_pred_not_aug]
 submission = pd.DataFrame()
 submission['image_name'] = df_test.image_name.values
 submission['tags'] = predictions
-submission.to_csv('./results/submission_CNN_1_THRESHHOLD_001.csv', index=False)
+submission.to_csv('./results-VGG/submission_VGG16_THRESHHOLD_01_not_aug.csv', index=False)
 
 
-predictions = [' '.join(labels[y_pred_row > 0.05]) for y_pred_row in y_pred]
+predictions = [' '.join(labels[y_pred_row >= 0.2]) for y_pred_row in y_pred_not_aug]
 submission = pd.DataFrame()
 submission['image_name'] = df_test.image_name.values
 submission['tags'] = predictions
-submission.to_csv('./results/submission_CNN_1_THRESHHOLD_005.csv', index=False)
+submission.to_csv('./results-VGG/submission_VGG16_THRESHHOLD_02_not_aug.csv', index=False)
 
-
-predictions = [' '.join(labels[y_pred_row > 0.10]) for y_pred_row in y_pred]
+predictions = [' '.join(labels[y_pred_row >= 0.5]) for y_pred_row in y_pred_not_aug]
 submission = pd.DataFrame()
 submission['image_name'] = df_test.image_name.values
 submission['tags'] = predictions
-submission.to_csv('./results/submission_CNN_1_THRESHHOLD_01.csv', index=False)
+submission.to_csv('./results-VGG/submission_VGG16_THRESHHOLD_05_not_aug.csv', index=False)
 
-predictions = [' '.join(labels[y_pred_row > 0.20]) for y_pred_row in y_pred]
-submission = pd.DataFrame()
-submission['image_name'] = df_test.image_name.values
-submission['tags'] = predictions
-submission.to_csv('./results/submission_CNN_1_THRESHHOLD_02.csv', index=False)
 
 y_pred_val = model.predict(X_val, batch_size=batch_size)
 THRESHHOLD = get_optimal_threshhold(y_val, y_pred_val, iterations = 100)
 THRESHHOLD = np.array(THRESHHOLD)
-predictions = [' '.join(labels[y_pred_row > THRESHHOLD]) for y_pred_row in y_pred]
+predictions = [' '.join(labels[y_pred_row >= THRESHHOLD]) for y_pred_row in y_pred_not_aug]
 submission = pd.DataFrame()
 submission['image_name'] = df_test.image_name.values
 submission['tags'] = predictions
-submission.to_csv('./results/submission_CNN_THRESHOLD_OPTIMAL.csv', index=False)
+submission.to_csv('./results-VGG/submission_VGG16_THRESHOLD_OPTIMAL_not_aug.csv', index=False)
 
 
 
 
 
 
+##################### PREDICTIONS AUGMENTED #######################
+########### Split data 90% - 10% Validation #######################
+predictions = [' '.join(labels[y_pred_row >= 0.1]) for y_pred_row in y_pred]
+submission = pd.DataFrame()
+submission['image_name'] = df_test.image_name.values
+submission['tags'] = predictions
+submission.to_csv('./results-VGG/submission_VGG16_THRESHHOLD_01.csv', index=False)
 
 
+predictions = [' '.join(labels[y_pred_row >= 0.2]) for y_pred_row in y_pred]
+submission = pd.DataFrame()
+submission['image_name'] = df_test.image_name.values
+submission['tags'] = predictions
+submission.to_csv('./results-VGG/submission_VGG16_THRESHHOLD_02.csv', index=False)
+
+predictions = [' '.join(labels[y_pred_row >= 0.5]) for y_pred_row in y_pred]
+submission = pd.DataFrame()
+submission['image_name'] = df_test.image_name.values
+submission['tags'] = predictions
+submission.to_csv('./results-VGG/submission_VGG16_THRESHHOLD_05.csv', index=False)
+
+
+y_pred_val = model.predict(X_val, batch_size=batch_size)
+THRESHHOLD = get_optimal_threshhold(y_val, y_pred_val, iterations = 100)
+THRESHHOLD = np.array(THRESHHOLD)
+predictions = [' '.join(labels[y_pred_row >= THRESHHOLD]) for y_pred_row in y_pred]
+submission = pd.DataFrame()
+submission['image_name'] = df_test.image_name.values
+submission['tags'] = predictions
+submission.to_csv('./results-VGG/submission_VGG16_THRESHOLD_OPTIMAL.csv', index=False)
