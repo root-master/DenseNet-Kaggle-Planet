@@ -397,7 +397,7 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
 
     val_loss_last = val_loss
     val_loss, val_acc,val_f2_score = \
-            model.evaluate_generator(generator,steps_per_epoch=len(X_val) / batch_size)
+            model.evaluate_generator(generator,steps=len(X_val) / batch_size,use_multiprocessing=True)
     
     # save the best model based on validation loss
     if val_loss < val_loss_min:
@@ -468,11 +468,10 @@ for test_slice in tqdm(test_slices,miniters=1,desc='Prediction'):
     X_test = load_test_data_slice(test_slice)
     X_test = preprocess(X_test)
     y_pred_not_aug[test_slice,:] = model.predict(X_test, batch_size=batch_size,verbose=1)
-
     datagen.fit(X_test)
     generator = datagen.flow(X_test,batch_size=batch_size)
     y_pred[test_slice,:] = \
-        model.predict_generator(generator, steps=len(X_test)/batch_size, max_queue_size=10, workers=1, use_multiprocessing=True, verbose=1)
+        model.predict_generator(generator, steps=len(X_test)/batch_size, verbose=1)
 
 
 
@@ -506,10 +505,6 @@ submission = pd.DataFrame()
 submission['image_name'] = df_test.image_name.values
 submission['tags'] = predictions
 submission.to_csv('./results-VGG/submission_VGG16_THRESHOLD_OPTIMAL_not_aug.csv', index=False)
-
-
-
-
 
 
 ##################### PREDICTIONS AUGMENTED #######################
