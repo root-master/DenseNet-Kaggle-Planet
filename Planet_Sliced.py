@@ -399,7 +399,7 @@ for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
             model.evaluate_generator(generator,steps_per_epoch=len(X_val) / batch_size)
     
     # save the best model based on validation loss
-    if val_loss < val_loss_min
+    if val_loss < val_loss_min:
         val_loss_min = val_loss
         wait = 0 # restart wait
         model.save('best-epoch-model-min-val-loss.h5')
