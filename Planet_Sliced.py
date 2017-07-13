@@ -351,7 +351,6 @@ val_loss = 1000
 val_loss_min = 1000
 val_loss_last = 1000
 wait = 0 # using for early stopping
-patience = 
 
 for e in tqdm(range(epochs),miniters=1,desc='Epochs'):
     start = time.time()
